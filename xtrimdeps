@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/sh
 for deptype in hostmakedepends makedepends depends; do
 	pkgs="$(xmindep $(xgetdeps "$deptype" "$1"))"
 	[ -z "$pkgs" ] && continue
