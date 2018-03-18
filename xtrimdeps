@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 for deptype in hostmakedepends makedepends depends; do
+	pkgs="$(xmindep $(xgetdeps "$deptype" "$1"))"
+	[ -z "$pkgs" ] && continue
 	printf "%s=\"" "$deptype"
-	for pkg in $(xmindep $(xgetdeps "$deptype" "$1") ); do
+	for pkg in $pkgs ; do
 		printf "%s " "$pkg"
 	done | sed -e 's/[[:space:]]*$/"\n/g'
 done
