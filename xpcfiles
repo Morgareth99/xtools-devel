@@ -1,0 +1,9 @@
+#!/bin/sh
+# xpcfiles PKGS ... - Show all .pc files in a package and it's subpackages
+for pkg; do
+	for subpkg in $(xsubpkg "$pkg") ; do
+		xls "$subpkg" | grep '/usr/\(lib\|share\)/pkgconfig' | sed 's|.*/||g' &
+	done
+done
+
+wait
