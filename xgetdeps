@@ -3,7 +3,7 @@
 get_deps() {
 	# we need to use bash otherwise templates that have functions that do not
 	# conform to POSIX like libmarco-devel_package() will cause problems
-	source srcpkgs/"$2"/template 2>/dev/null
+	source "$(xdistdir)"/srcpkgs/"$2"/template 2>/dev/null
 	eval "ARG=\$$1"
 	for pkg in $ARG ; do
 		printf "%s " "$pkg"
