@@ -1,5 +1,5 @@
 #!/bin/sh
-for deptype in hostmakedepends makedepends depends; do
+for deptype in hostmakedepends makedepends depends checkdepends; do
 	pkgs="$(xmindep $(xgetdeps "$deptype" "$1"))"
 	[ -z "$pkgs" ] && continue
 	printf "%s=\"" "$deptype"
