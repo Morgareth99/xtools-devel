@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 # xgetdeps deptype PKG - get dependencies from package by sourcing it's template
+
+# stub functions for the system
+vopt_if() {
+	printf "%s %s\\n" "$2" "$3"
+}
+
 get_deps() {
 	# we need to use bash otherwise templates that have functions that do not
 	# conform to POSIX like libmarco-devel_package() will cause problems
 	source "$(xdistdir)"/srcpkgs/"$2"/template 2>/dev/null
 	eval "ARG=\$$1"
 	for pkg in $ARG ; do
+		pkg=${pkg//virtual}
 		printf "%s " "$pkg"
 	done
 	printf "\\n"
