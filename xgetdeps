@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# xgetdeps deptype PKG - get dependencies from package by sourcing it's template
-
 # stub functions for the system
 vopt_if() {
-	printf "%s %s\\n" "$2" "$3"
+	if [ "$3" ] ; then
+		printf "vopt_%s_%s_%s\\n" "$1" "$2" "$3"
+	else
+		printf "vopt_%s_%s\\n" "$1" "$2"
+	fi
 }
 
 get_deps() {
