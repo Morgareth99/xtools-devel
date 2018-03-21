@@ -78,7 +78,7 @@ def main():
         if deptype not in POSSIBLE_DEPTYPES:
             continue
 
-        pkgs = (get_pkglist(pkgs))
+        pkgs = get_pkglist(pkgs)
 
         regex = deptype + '=\"(.*\\n){0,}?.*\"'
         mod = re.sub(r'^%s' % regex, deptype + '="' + pkgs + '"',
