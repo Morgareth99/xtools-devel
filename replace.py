@@ -9,6 +9,22 @@ POSSIBLE_DEPTYPES = ["hostmakedepends", "makedepends", "depends",
 
 
 def get_pkglist(pkgs: str) -> str:
+    """ Takes a whitespace-separated string of pkgs and iterates over them.
+
+        as if they were a list then return them as a string
+        for an explaination of each symbol see xgetdeps in the
+        same repo.
+        actions done for the symbols given:
+        1. separate by whitespace
+        2. if string vopt not found then add to pkglist list
+        3. if string vopt found then check if | is not present
+        4. if string | is not present then we replace ' with nothing
+        5. replace all / and | with ' '
+        6. replace vopt with $(vopt_if then append ) to the end of the string
+        7. add to pkgvoptlist
+        8. iterate over pkgvoptlist and append to pkglist
+        9. join pkglist over ' ' and return it
+    """
     pkglist = []
     pkgvoptlist = []
 
@@ -16,8 +32,12 @@ def get_pkglist(pkgs: str) -> str:
         if 'vopt' not in pkg:
             pkglist.append(pkg)
         else:
+            if '|' not in pkg:
+                pkg = pkg.replace("'", "")
+
             pkgvoptlist.append(pkg
-                               .replace('_', ' ')
+                               .replace('/', ' ')
+                               .replace('|', ' ')
                                .replace('vopt', '$(vopt_if') + ')')
 
     for vpkg in pkgvoptlist:
