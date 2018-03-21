@@ -3,12 +3,13 @@
 import re
 import sys
 import subprocess
+import argparse
 
 POSSIBLE_DEPTYPES = ["hostmakedepends", "makedepends", "depends",
                      "checkdepends"]
 
 
-def get_pkglist(pkgs):
+def get_pkglist(pkgs: str) -> str:
     pkglist = []
     pkgvoptlist = []
 
@@ -27,26 +28,32 @@ def get_pkglist(pkgs):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print('no template provided')
-        sys.exit(1)
-    elif len(sys.argv) < 3:
-        print('no deptype ... provided')
-        sys.exit(1)
-    elif len(sys.argv) < 4:
-        print('no replace string provided')
-        sys.exit(1)
+    p = argparse.ArgumentParser(description="trim dependencies of templates.")
+    p.add_argument('pkgname', metavar='template', type=str,
+                   help='name of the package to be trimmed')
+    p.add_argument('deptypes', metavar='deptypes', type=str,
+                   help='single white-space separated string of deptypes')
+    p.add_argument('pkgs', metavar='pkgs', type=str,
+                   help='single white-space separated string of packages')
+    p.add_argument('-i', dest='replace', action='store_true', default=False,
+                   help='replace dependencies in template')
 
-    filepath = 'srcpkgs/' + sys.argv[1] + '/template'
+    args = p.parse_args()
+
+    """
+        Create a path by taking xdistdir and add srcpkgs/ the pkgname and
+        /template
+    """
+    filepath = 'srcpkgs/' + args.pkgname + '/template'
     xdistdir = subprocess.run('xdistdir', stdout=subprocess.PIPE)
     filepath = xdistdir.stdout.decode('utf-8').replace('\n', '/') + filepath
 
-    pkgs = sys.argv[3].replace('\n', ' ')
+    pkgs = args.pkgs.replace('\n', ' ')  # this might be unecessary
 
     with open(filepath, 'r') as file_in:
         mod = file_in.read()
 
-    deptypes = sys.argv[2].split(" ")
+    deptypes = args.deptypes.split(" ")
 
     for deptype in deptypes:
         if deptype not in POSSIBLE_DEPTYPES:
@@ -62,9 +69,10 @@ def main():
 
     file_in.close()
 
-    with open(filepath, 'w') as file_out:
-        file_out.write(mod)
-        file_out.close()
+    if args.replace:
+        with open(filepath, 'w') as file_out:
+            file_out.write(mod)
+            file_out.close()
 
 
 if __name__ == "__main__":
