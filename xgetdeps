@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 # stub functions for the system
 vopt_if() {
+	# delimitators of the packages
+	# / -> delimitates between spaces in a vopt statement
+	# example $(vopt_if var pkgs) -> vopt/var/pkgs
+	# -------------------------------------------------------------------------
+	# | -> delimitates between spaces inside a vopt pkg
+	# example $(vopt_if var 'pkg1 pkg2') -> vopt/var/pkg1|pkg2
+	# -------------------------------------------------------------------------
+	# ' -> delimitates a variable, more specifically a pkg group
+	# example $(vopt_if var pkg1) -> vopt/var/'pkg1'
 	if [ "$3" ] ; then
-		printf "vopt_%s_%s_%s\\n" "$1" "$2" "$3"
+		printf "vopt/%s/'%s'/'%s'\\n" "$1" "${2// /|}" "${3// /|}"
 	else
-		printf "vopt_%s_%s\\n" "$1" "$2"
+		printf "vopt/%s/'%s'\\n" "$1" "${2// /|}"
 	fi
 }
 
