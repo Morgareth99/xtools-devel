@@ -2,8 +2,5 @@
 for deptype in hostmakedepends makedepends depends checkdepends; do
 	pkgs="$(xmindep $(xgetdeps "$deptype" "${1:-$(git rev-parse --abbrev-ref HEAD)}"))"
 	[ -z "$pkgs" ] && continue
-	printf "%s=\"" "$deptype"
-	for pkg in $pkgs ; do
-		printf "%s " "$pkg"
-	done | sed -e 's/[[:space:]]*$/"\n/g'
+	replace.py "${1:-$(git rev-parse --abbrev-ref HEAD)}" "$deptype" "$pkgs"
 done
