@@ -94,7 +94,7 @@ def main():
     filepath = xdistdir.stdout.decode('utf-8').replace('\n', '/') + filepath
 
     if not os.path.isfile(filepath):
-        print('invalid path: ' + args.pkgname + '/template', file=sys.stderr)
+        print('invalid path: ' + filepath, file=sys.stderr)
         sys.exit(2)
 
     """ packages recieved might be broken into multiple lines, we do our own
