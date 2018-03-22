@@ -2,6 +2,9 @@
 # stub functions for the system
 vopt_if() {
 	# delimitators of the packages
+	# vopt -> delimitates the start of the vopt statement
+	# example $(vopt_if var pkgs) -> vopt/var/pkgs
+	# -------------------------------------------------------------------------
 	# / -> delimitates between spaces in a vopt statement
 	# example $(vopt_if var pkgs) -> vopt/var/pkgs
 	# -------------------------------------------------------------------------
@@ -10,6 +13,9 @@ vopt_if() {
 	# -------------------------------------------------------------------------
 	# ' -> delimitates a variable, more specifically a pkg group
 	# example $(vopt_if var pkg1) -> vopt/var/'pkg1'
+	# -------------------------------------------------------------------------
+	# > -> delimitates the end of the string
+	# example $(vopt_if var pkg1) -> vopt/var/pkg1>
 	if [ "$3" ] ; then
 		printf "vopt/%s/'%s'/'%s'>\\n" "$1" "${2// /|}" "${3// /|}"
 	else
