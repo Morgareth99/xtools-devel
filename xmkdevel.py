@@ -10,6 +10,7 @@ from typing import List
 def checkfile(pkgstring: str, filelist: str) -> str:
     solib: bool = False
     alib: bool = False
+    lalib: bool = False
 
     paths: List[str] = ['/usr/include',
                         '/usr/lib/pkgconfig',
@@ -21,7 +22,8 @@ def checkfile(pkgstring: str, filelist: str) -> str:
                         '/usr/share/info',
                         '/usr/share/gtk-doc',
                         '/usr/share/gir-1.0',
-                        '/usr/lib/girepository-1.0']
+                        '/usr/share/vala',
+                        '/usr/share/doc']
 
     for path in paths:
         if path in filelist:
@@ -36,15 +38,19 @@ def checkfile(pkgstring: str, filelist: str) -> str:
             pkgstring += "\t\tvmove \"/usr/lib/*.a\"\n"
             alib = True
 
+        if line.split(' ->', 1)[0].endswith('.la') and not lalib:
+            pkgstring += "\t\tvmove \"/usr/lib/*.la\"\n"
+            lalib = True
+
     return pkgstring
 
 
 def main():
     p = argparse.ArgumentParser(description="create -devel packages.")
-    p.add_argument('pkgname', metavar='pkgname', type=str,
-                   help='name of the package to create the devel package')
     p.add_argument('develname', metavar='develname', type=str,
                    help='name of the devel package without -devel suffix')
+    p.add_argument('pkgname', metavar='pkgname', type=str,
+                   help='name of the package to create the devel package')
     p.add_argument('filelist', metavar='filelist', type=str,
                    help='newline separated list of files in main package')
     p.add_argument('-i', dest='replace', action='store_true', default=False,
@@ -56,7 +62,7 @@ def main():
         Create a path by taking xdistdir and add srcpkgs/ the pkgname and
         /template
     """
-    filepath = 'srcpkgs/' + args.pkgname + '/template'
+    filepath: str = 'srcpkgs/' + args.pkgname + '/template'
     xdistdir = subprocess.run('xdistdir', stdout=subprocess.PIPE)
     filepath = xdistdir.stdout.decode('utf-8').replace('\n', '/') + filepath
 
