@@ -71,8 +71,8 @@ $1-devel_package() {
 \tshort_desc+=" - development files"
 \tdepends="$2-${version}_${revision}
 \tpkg_install() {\n""".replace("$1",
-                                 args.develname).replace("$2",
-                                                         args.pkgname)
+                               args.develname).replace("$2",
+                                                       args.pkgname)
 
     with open(filepath, 'r') as file_in:
         f = file_in.read()
