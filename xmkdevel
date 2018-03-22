@@ -1,0 +1,10 @@
+#!/bin/sh
+cmd="xmkdevel.py"
+for arg; do
+	shift
+	[ "$arg" = "-i" ] && cmd="xmkdevel.py -i" && continue
+	set -- "$@" "$arg"
+done
+
+pkgname="${1:-"$(git rev-parse --abbrev-ref HEAD)"}"
+$cmd "$pkgname" "${2:-${pkgname}-devel}" "$(xsubpkg "$pkgname" | xargs xls)"
