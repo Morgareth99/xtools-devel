@@ -11,9 +11,9 @@ vopt_if() {
 	# ' -> delimitates a variable, more specifically a pkg group
 	# example $(vopt_if var pkg1) -> vopt/var/'pkg1'
 	if [ "$3" ] ; then
-		printf "vopt/%s/'%s'/'%s'\\n" "$1" "${2// /|}" "${3// /|}"
+		printf "vopt/%s/'%s'/'%s'>\\n" "$1" "${2// /|}" "${3// /|}"
 	else
-		printf "vopt/%s/'%s'\\n" "$1" "${2// /|}"
+		printf "vopt/%s/'%s'>\\n" "$1" "${2// /|}"
 	fi
 }
 
