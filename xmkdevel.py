@@ -21,7 +21,7 @@ def checkfile(pkgstring: str, filelist: str) -> str:
                         '/usr/share/info',
                         '/usr/share/gtk-doc',
                         '/usr/share/git-1.0',
-                        '/usr/lib/gitrepository-1.0']
+                        '/usr/lib/girepository-1.0']
 
     for path in paths:
         if path in filelist:
