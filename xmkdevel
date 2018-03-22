@@ -7,4 +7,4 @@ for arg; do
 done
 
 pkgname="${1:-"$(git rev-parse --abbrev-ref HEAD)"}"
-$cmd "$pkgname" "${2:-${pkgname}-devel}" "$(xsubpkg "$pkgname" | xargs xls)"
+$cmd "${2:-${pkgname}}" "$pkgname" "$(xsubpkg "$pkgname" | xargs xls)"
