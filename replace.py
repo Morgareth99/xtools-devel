@@ -25,8 +25,11 @@ def get_pkglist(pkgs: str) -> str:
         8. iterate over pkgvoptlist and append to pkglist
         9. join pkglist over ' ' and return it
     """
-    pkglist = []
-    pkgvoptlist = []
+
+    from typing import List
+
+    pkglist: List[str] = []
+    pkgvoptlist: List[str] = []
 
     for pkg in pkgs.split(' '):
         if 'vopt' not in pkg:
