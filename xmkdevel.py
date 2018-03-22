@@ -20,7 +20,7 @@ def checkfile(pkgstring: str, filelist: str) -> str:
                         '/usr/share/man/man3',
                         '/usr/share/info',
                         '/usr/share/gtk-doc',
-                        '/usr/share/git-1.0',
+                        '/usr/share/gir-1.0',
                         '/usr/lib/girepository-1.0']
 
     for path in paths:
