@@ -56,15 +56,15 @@ def checkfile(pkglist: List[str], filelist: str) -> str:
             pkglist.append('\t\tvmove "/usr/lib/*.a"')
             alib = True
 
+        if line.endswith('.la') and not lalib:
+            pkglist.append('\t\tvmove "/usr/lib/*.la"')
+            lalib = True
+
         if ' -> ' in line:
             line = line.split(' -> ', 1)[0]
             if line.endswith('.so') and not solib:
                 pkglist.append('\t\tvmove "/usr/lib/*.so"')
                 solib = True
-
-            if line.endswith('.la') and not lalib:
-                pkglist.append('\t\tvmove "/usr/lib/*.la"')
-                lalib = True
 
     pkglist.append('\t}')
     pkglist.append('}')
