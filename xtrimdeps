@@ -1,12 +1,11 @@
 #!/bin/sh
 cmd="replace.py"
 
-if [ "$1" = "-i" ]; then
-	cmd="replace.py -i"
+for arg; do
 	shift
-elif [ "$2" = "-i" ]; then
-	cmd="replace.py -i"
-fi
+	[ "$arg" = "-i" ] && cmd="replace.py -i" && continue
+	set -- "$@" "$arg"
+done
 
 for deptype in hostmakedepends makedepends depends checkdepends; do
 	pkgs="$(xmindep $(xgetdeps "$deptype" "${1:-$(git rev-parse --abbrev-ref HEAD)}"))"
