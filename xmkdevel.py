@@ -31,15 +31,16 @@ def checkfile(pkgstring: str, filelist: str) -> str:
 
     for line in filelist.split('\n'):
         if ' -> ' in line:
-            if line.split(' ->', 1)[0].endswith('.so') and not solib:
+            line = line.split(' -> ', 1)[0]
+            if line.endswith('.so') and not solib:
                 pkgstring += "\t\tvmove \"/usr/lib/*.so\"\n"
                 solib = True
 
-            if line.split(' ->', 1)[0].endswith('.a') and not alib:
+            if line.endswith('.a') and not alib:
                 pkgstring += "\t\tvmove \"/usr/lib/*.a\"\n"
                 alib = True
 
-            if line.split(' ->', 1)[0].endswith('.la') and not lalib:
+            if line.endswith('.la') and not lalib:
                 pkgstring += "\t\tvmove \"/usr/lib/*.la\"\n"
                 lalib = True
 
