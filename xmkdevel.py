@@ -30,17 +30,18 @@ def checkfile(pkgstring: str, filelist: str) -> str:
             pkgstring += "\t\tvmove " + path + "\n"
 
     for line in filelist.split('\n'):
-        if line.split(' ->', 1)[0].endswith('.so') and not solib:
-            pkgstring += "\t\tvmove \"/usr/lib/*.so\"\n"
-            solib = True
+        if ' -> ' in line:
+            if line.split(' ->', 1)[0].endswith('.so') and not solib:
+                pkgstring += "\t\tvmove \"/usr/lib/*.so\"\n"
+                solib = True
 
-        if line.split(' ->', 1)[0].endswith('.a') and not alib:
-            pkgstring += "\t\tvmove \"/usr/lib/*.a\"\n"
-            alib = True
+            if line.split(' ->', 1)[0].endswith('.a') and not alib:
+                pkgstring += "\t\tvmove \"/usr/lib/*.a\"\n"
+                alib = True
 
-        if line.split(' ->', 1)[0].endswith('.la') and not lalib:
-            pkgstring += "\t\tvmove \"/usr/lib/*.la\"\n"
-            lalib = True
+            if line.split(' ->', 1)[0].endswith('.la') and not lalib:
+                pkgstring += "\t\tvmove \"/usr/lib/*.la\"\n"
+                lalib = True
 
     return pkgstring
 
