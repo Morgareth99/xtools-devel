@@ -18,8 +18,11 @@ def checkfile(pkglist: List[str], filelist: str) -> str:
 
         it also detects symlinks by parsing over all lines and checking if one
         contains ' -> ', it then splits it and gets the first half and checks
-        if it ends with .so .a or .la and if matched it adds a glob vmove
+        if it ends with .so or .la and if matched it adds a glob vmove
         statement
+
+        if no ' -> ' is found it still will check for .a since those aren't
+        symlinked
 
         to complete the string it adds \t} and } and then returns a string
 
@@ -49,15 +52,15 @@ def checkfile(pkglist: List[str], filelist: str) -> str:
             pkglist.append('\t\tvmove %s' % path)
 
     for line in filelist.split('\n'):
+        if line.endswith('.a') and not alib:
+            pkglist.append('\t\tvmove "/usr/lib/*.a"')
+            alib = True
+
         if ' -> ' in line:
             line = line.split(' -> ', 1)[0]
             if line.endswith('.so') and not solib:
                 pkglist.append('\t\tvmove "/usr/lib/*.so"')
                 solib = True
-
-            if line.endswith('.a') and not alib:
-                pkglist.append('\t\tvmove "/usr/lib/*.a"')
-                alib = True
 
             if line.endswith('.la') and not lalib:
                 pkglist.append('\t\tvmove "/usr/lib/*.la"')
