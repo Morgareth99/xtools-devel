@@ -7,7 +7,26 @@ import sys
 from typing import List
 
 
-def checkfile(pkgstring: str, filelist: str) -> str:
+def checkfile(pkglist: List[str], filelist: str) -> str:
+    """ adds vmove declarations to a -devel package function
+        pkglist -> List of strings that make up the definition up
+        untill 'pkg_install() {'
+        filelist -> single string that has all files, separated by newline
+
+        it checks for the presence of a path in filelist for each path defined
+        in paths, for each match it appends to pkglist a vmove path statement
+
+        it also detects symlinks by parsing over all lines and checking if one
+        contains ' -> ', it then splits it and gets the first half and checks
+        if it ends with .so .a or .la and if matched it adds a glob vmove
+        statement
+
+        to complete the string it adds \t} and } and then returns a string
+
+        TODO: make it deal with .so,.a,.la in places other than /usr/lib
+        TODO: make it recieve a list of files instead of a whole string
+    """
+
     solib: bool = False
     alib: bool = False
     lalib: bool = False
@@ -27,24 +46,27 @@ def checkfile(pkgstring: str, filelist: str) -> str:
 
     for path in paths:
         if path in filelist:
-            pkgstring += "\t\tvmove " + path + "\n"
+            pkglist.append('\t\tvmove %s' % path)
 
     for line in filelist.split('\n'):
         if ' -> ' in line:
             line = line.split(' -> ', 1)[0]
             if line.endswith('.so') and not solib:
-                pkgstring += "\t\tvmove \"/usr/lib/*.so\"\n"
+                pkglist.append('\t\tvmove "/usr/lib/*.so"')
                 solib = True
 
             if line.endswith('.a') and not alib:
-                pkgstring += "\t\tvmove \"/usr/lib/*.a\"\n"
+                pkglist.append('\t\tvmove "/usr/lib/*.a"')
                 alib = True
 
             if line.endswith('.la') and not lalib:
-                pkgstring += "\t\tvmove \"/usr/lib/*.la\"\n"
+                pkglist.append('\t\tvmove "/usr/lib/*.la"')
                 lalib = True
 
-    return pkgstring
+    pkglist.append('\t}')
+    pkglist.append('}')
+
+    return '\n'.join(pkglist)
 
 
 def main():
@@ -74,28 +96,23 @@ def main():
         print("Invalid filepath: %s" % filepath)
         sys.exit(2)
 
-    pkgstring = """
-$1-devel_package() {
-\tshort_desc+=" - development files"
-\tdepends="$2-${version}_${revision}
-\tpkg_install() {\n""".replace("$1",
-                               args.develname).replace("$2",
-                                                       args.pkgname)
+    pkglist: List[str] = []
+    pkglist.append('%s-devel_package() {' % args.develname)
+    pkglist.append('\tshort_desc+=" - development files"')
+    pkglist.append('\tdepends="%s-${version}_${revision}"' % args.pkgname)
+    pkglist.append('\tpkg_install() {')
 
-    with open(filepath, 'r') as file_in:
-        f = file_in.read()
+    if args.replace:
+        with open(filepath, 'r') as file_in:
+            f = file_in.read()
 
-        if args.replace:
             if f.find(devname) != -1:
                 print('package already made for the name: %s' % devname)
                 sys.exit(2)
 
-    file_in.close()
+        file_in.close()
 
-    pkgstring = checkfile(pkgstring, args.filelist)
-
-    pkgstring += "\t}\n"
-    pkgstring += "}\n"
+    pkgstring = checkfile(pkglist, args.filelist)
 
     print(pkgstring)
 
