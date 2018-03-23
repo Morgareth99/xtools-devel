@@ -102,8 +102,9 @@ def main():
     """
     pkgs = args.pkgs.replace('\n', ' ')
 
-    with open(filepath, 'r') as file_in:
-        mod = file_in.read()
+    if args.replace:
+        with open(filepath, 'r') as file_in:
+            mod = file_in.read()
 
     """ we might have multiple deptypes separated by white-space
         we will iterate over each one of them separately as they
@@ -115,15 +116,16 @@ def main():
 
         pkgs: str = format_deplist(pkgs, deptype)
 
-        regex = deptype + '=\"(.*\\n){0,}?.*\"'
-        mod = re.sub(r'^%s' % regex, pkgs,
-                     str(mod), flags=re.MULTILINE)
+        if args.replace:
+            regex = deptype + '=\"(.*\\n){0,}?.*\"'
+            mod = re.sub(r'^%s' % regex, pkgs,
+                         str(mod), flags=re.MULTILINE)
 
         print(pkgs)
 
-    file_in.close()
-
     if args.replace:
+        file_in.close()
+
         with open(filepath, 'w') as file_out:
             file_out.write(mod)
             file_out.close()
