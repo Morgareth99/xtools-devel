@@ -44,8 +44,7 @@ def checkfile(pkglist: List[str], filelist: str) -> str:
                         '/usr/share/info',
                         '/usr/share/gtk-doc',
                         '/usr/share/gir-1.0',
-                        '/usr/share/vala',
-                        '/usr/share/doc']
+                        '/usr/share/vala']
 
     for path in paths:
         if path in filelist:
@@ -99,7 +98,7 @@ def main():
         print("Invalid filepath: %s" % filepath)
         sys.exit(2)
 
-    pkglist: List[str] = []
+    pkglist: List[str] = ['']
     pkglist.append('%s-devel_package() {' % args.develname)
     pkglist.append('\tshort_desc+=" - development files"')
     pkglist.append('\tdepends="%s-${version}_${revision}"' % args.pkgname)
