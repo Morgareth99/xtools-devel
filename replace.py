@@ -42,7 +42,6 @@ def main():
     from subprocess import run, PIPE
     from os.path import isfile
     from re import sub, MULTILINE
-    from sys import exit
 
     canbedeps = ["hostmakedepends", "makedepends", "depends", "checkdepends"]
 
