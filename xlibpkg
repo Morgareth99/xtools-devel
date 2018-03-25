@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 
-import argparse
-import subprocess
-import os.path
-import sys
-import re
 from typing import List
-
+from re import search, sub
+from sys import exit
 
 def place_in_file(pkglist: List[str], filepath: str):
     template_file: List[str] = []
@@ -19,10 +15,9 @@ def place_in_file(pkglist: List[str], filepath: str):
                 lib package definition before it, if not we just add
                 our definition to the end of the file
             """
-            if re.search('-devel_package()', line) and not hasdevel:
+            if search('-devel_package()', line) and not hasdevel:
                 hasdevel = True
-                for pkgl in pkglist:
-                    template_file.append(pkgl)
+                template_file.append('\n'.join(pkglist))
                 template_file.append('')
             template_file.append(line.strip('\n'))
 
@@ -35,7 +30,11 @@ def place_in_file(pkglist: List[str], filepath: str):
 
 
 def main():
-    p = argparse.ArgumentParser(description="create libpkg packages.")
+    from argparse import ArgumentParser
+    from os.path import isfile
+    from subprocess import run, PIPE
+
+    p = ArgumentParser(description="create libpkg packages.")
     p.add_argument('pkgname', help='name of the original package')
     p.add_argument('--lib', dest='lib', nargs='+',
                    help='name of the lib packages')
@@ -50,19 +49,19 @@ def main():
     """
     if not args.lib:
         args.lib: List[str] = []
-        args.lib.append('lib' + args.pkgname)
+        args.lib.append(['lib' + args.pkgname])
 
     """
         Create a path by taking xdistdir and add srcpkgs/ the pkgname and
         /template
     """
     filepath: str = 'srcpkgs/' + args.pkgname + '/template'
-    xdistdir = subprocess.run('xdistdir', stdout=subprocess.PIPE)
+    xdistdir = run('xdistdir', stdout=PIPE)
     filepath = xdistdir.stdout.decode('utf-8').replace('\n', '/') + filepath
 
-    if not os.path.isfile(filepath):
+    if not isfile(filepath):
         print("Invalid filepath: %s" % filepath)
-        sys.exit(2)
+        exit(2)
 
     for libpkgname in args.lib:
 
@@ -76,8 +75,8 @@ def main():
                 so we strip them out, an example is libgtk+-3 which becomes
                 gtk+ library
             """
-            libname = re.sub('lib', '', libpkgname)
-            libname = re.sub('-[0-9].*', '', libname)
+            libname = sub('lib', '', libpkgname)
+            libname = sub('-[0-9].*', '', libname)
             pkglist.append('\tshort_desc="%s library"' % libname)
         else:
             pkglist.append('\tshort_desc+=" - runtime library"')
@@ -101,20 +100,6 @@ def main():
             place_in_file(pkglist, filepath)
 
         print('\n'.join(pkglist))
-
-    if args.replace:
-        with open(filepath, 'r') as file_in:
-            f = file_in.read()
-
-            if f.find(args.libpkgname) != -1:
-                print('package name %s already taken' % args.libpkgname)
-                sys.exit(2)
-
-        file_in.close()
-
-    if args.replace:
-        with open(filepath, "a") as file_out:
-            file_out.close()
 
 
 if __name__ == "__main__":
