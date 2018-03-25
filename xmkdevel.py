@@ -77,8 +77,6 @@ def main():
                    help='name of the devel package without -devel suffix')
     p.add_argument('pkgname', metavar='pkgname', type=str,
                    help='name of the package to create the devel package')
-    p.add_argument('filelist', metavar='filelist', type=str,
-                   help='newline separated list of files in main package')
     p.add_argument('-i', dest='replace', action='store_true', default=False,
                    help='replace dependencies in template')
 
@@ -92,14 +90,28 @@ def main():
     xdistdir = subprocess.run('xdistdir', stdout=subprocess.PIPE)
     filepath = xdistdir.stdout.decode('utf-8').replace('\n', '/') + filepath
 
-    devname = args.develname + '-devel'
-
     if not os.path.isfile(filepath):
         print("Invalid filepath: %s" % filepath)
         sys.exit(2)
 
+    """
+        xsubpkg returns the main package and all subpackages of a given name
+        we later run it over xls that returns us a newline separated list of
+        files
+    """
+    pkgs = subprocess.run(['xsubpkg', args.pkgname], stdout=subprocess.PIPE)
+
+    filearray = bytearray()
+    for pkg in pkgs.stdout.decode('utf-8').splitlines():
+        filearray += subprocess.run(['xls', pkg],
+                                    stdout=subprocess.PIPE).stdout
+
+    files: str = filearray.decode('utf-8')
+
+    devname = args.develname + '-devel'
+
     pkglist: List[str] = ['']
-    pkglist.append('%s-devel_package() {' % args.develname)
+    pkglist.append('%s_package() {' % devname)
     pkglist.append('\tshort_desc+=" - development files"')
     pkglist.append('\tdepends="%s-${version}_${revision}"' % args.pkgname)
     pkglist.append('\tpkg_install() {')
@@ -114,7 +126,7 @@ def main():
 
         file_in.close()
 
-    pkgstring = checkfile(pkglist, args.filelist)
+    pkgstring = checkfile(pkglist, files)
 
     print(pkgstring)
 
