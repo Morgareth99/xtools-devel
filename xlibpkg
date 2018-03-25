@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
 from typing import List
-from re import search, sub
-from sys import exit
 
 def place_in_file(pkglist: List[str], filepath: str):
+
+    from re import search
+
     template_file: List[str] = []
     hasdevel: bool = False
 
@@ -33,6 +34,7 @@ def main():
     from argparse import ArgumentParser
     from os.path import isfile
     from subprocess import run, PIPE
+    from re import sub
 
     p = ArgumentParser(description="create libpkg packages.")
     p.add_argument('pkgname', help='name of the original package')
