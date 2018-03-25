@@ -10,5 +10,5 @@ done
 for deptype in hostmakedepends makedepends depends checkdepends; do
 	pkgs="$(xmindep $(xgetdeps "$deptype" "${1:-$(git rev-parse --abbrev-ref HEAD)}"))"
 	[ -z "$pkgs" ] && continue
-	$cmd "${1:-$(git rev-parse --abbrev-ref HEAD)}" "$deptype" "$pkgs"
+	$cmd "${1:-$(git rev-parse --abbrev-ref HEAD)}" "$pkgs" --deps "$deptype"
 done
