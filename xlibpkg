@@ -8,13 +8,18 @@ import re
 from typing import List
 
 
-def place_in_file(libpkgname: str, pkglist: List[str], filepath: str):
+def place_in_file(pkglist: List[str], filepath: str):
     template_file: List[str] = []
     hasdevel: bool = False
 
     with open(filepath, 'r') as file_in:
         for line in file_in:
-            if re.search('-devel_package()', line):
+            """
+                we search for a -devel package definition and put our
+                lib package definition before it, if not we just add
+                our definition to the end of the file
+            """
+            if re.search('-devel_package()', line) and not hasdevel:
                 hasdevel = True
                 for pkgl in pkglist:
                     template_file.append(pkgl)
@@ -31,14 +36,21 @@ def place_in_file(libpkgname: str, pkglist: List[str], filepath: str):
 
 def main():
     p = argparse.ArgumentParser(description="create libpkg packages.")
-    p.add_argument('libpkgname', metavar='libpkgname', type=str,
-                   help='name of the lib packages by whitespace')
-    p.add_argument('pkgname', metavar='pkgname', type=str,
-                   help='name of the original package')
+    p.add_argument('pkgname', help='name of the original package')
+    p.add_argument('--lib', dest='lib', nargs='+',
+                   help='name of the lib packages')
     p.add_argument('-i', dest='replace', action='store_true', default=False,
                    help='replace dependencies in template')
 
     args = p.parse_args()
+
+    """
+        if no library packages are defined via --lib then we turn args.lib
+        into the pkgname provided prefixed with lib
+    """
+    if not args.lib:
+        args.lib: List[str] = []
+        args.lib.append('lib' + args.pkgname)
 
     """
         Create a path by taking xdistdir and add srcpkgs/ the pkgname and
@@ -52,14 +64,18 @@ def main():
         print("Invalid filepath: %s" % filepath)
         sys.exit(2)
 
-    libpkgnames = args.libpkgname.split(' ')
-
-    for libpkgname in libpkgnames:
+    for libpkgname in args.lib:
 
         pkglist: List[str] = ['']
         pkglist.append('%s_package() {' % libpkgname)
 
-        if len(libpkgnames) > 1:
+        if len(args.lib) > 1:
+            """
+                We are creating a string to be used in the description
+                we don't need to indicate it is a library or it's version
+                so we strip them out, an example is libgtk+-3 which becomes
+                gtk+ library
+            """
             libname = re.sub('lib', '', libpkgname)
             libname = re.sub('-[0-9].*', '', libname)
             pkglist.append('\tshort_desc="%s library"' % libname)
@@ -68,7 +84,7 @@ def main():
 
         pkglist.append('\tpkg_install() {')
 
-        if len(libpkgnames) > 1:
+        if len(args.lib) > 1:
             pkglist.append('\t\tvmove "/usr/lib/%s*.so.*"' % libpkgname)
         else:
             pkglist.append('\t\tvmove "/usr/lib/*.so.*"')
@@ -82,8 +98,8 @@ def main():
                     print('package name %s already taken' % libpkgname)
                     continue
 
-            place_in_file(libpkgname, pkglist, filepath)
-        
+            place_in_file(pkglist, filepath)
+
         print('\n'.join(pkglist))
 
     if args.replace:
