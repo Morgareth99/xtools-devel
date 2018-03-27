@@ -72,7 +72,7 @@ def main():
     """ packages recieved might be broken into multiple lines, we do our own
         text formatting on format_deplist
     """
-    pkgs = args.pkgs.replace('\n', ' ')
+    pkgs: str = args.pkgs.replace('\n', ' ')
 
     """ we might have multiple deptypes separated by white-space
         we will iterate over each one of them separately as they
@@ -82,7 +82,7 @@ def main():
         if deptype not in canbedeps:
             continue
 
-        pkgs: str = format_deplist(pkgs, deptype)
+        pkgs = format_deplist(pkgs, deptype)
 
         print(pkgs)
 
