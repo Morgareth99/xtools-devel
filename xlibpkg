@@ -30,6 +30,32 @@ def place_in_file(pkglist: List[str], filepath: str):
         file_out.write('\n'.join(template_file))
 
 
+def make_symlink(srcpkg: str, dstpkg: str, path: str) -> bool:
+    from os import chdir, symlink
+    from os.path import exists, realpath, islink
+
+    chdir(path)
+
+    if exists(dstpkg):
+        if islink(dstpkg) and realpath(dstpkg) == realpath(srcpkg):
+            return True
+
+        print("Can't make symlink %s exists" % dstpkg)
+        return False
+
+    if not exists(srcpkg):
+        print("Can't make symlink %s doesn't exist" % srcpkg)
+        return False
+
+    symlink(srcpkg, dstpkg)
+
+    if islink(dstpkg) and realpath(dstpkg) == realpath(srcpkg):
+        return True
+
+    print("Failed to make symlink to %s" % dstpkg)
+    return False
+
+
 def main():
     from argparse import ArgumentParser
     from os.path import isfile
@@ -37,7 +63,8 @@ def main():
     from re import sub
 
     p = ArgumentParser(description="create libpkg packages.")
-    p.add_argument('pkgname', help='name of the original package')
+    p.add_argument('--pkg', dest='pkgname', required=True,
+                   help='name of the main package')
     p.add_argument('--lib', dest='lib', nargs='+',
                    help='name of the lib packages')
     p.add_argument('-i', dest='replace', action='store_true', default=False,
@@ -50,16 +77,16 @@ def main():
         into the pkgname provided prefixed with lib
     """
     if not args.lib:
-        args.lib: List[str] = []
-        args.lib.append(['lib' + args.pkgname])
+        args.lib: List[str] = ['lib' + args.pkgname]
 
     """
         Create a path by taking xdistdir and add srcpkgs/ the pkgname and
         /template
     """
     filepath: str = 'srcpkgs/' + args.pkgname + '/template'
-    xdistdir = run('xdistdir', stdout=PIPE)
-    filepath = xdistdir.stdout.decode('utf-8').replace('\n', '/') + filepath
+    xdistdir = run('xdistdir', stdout=PIPE).stdout.decode('utf-8')
+    xdistdir = xdistdir.replace('\n', '/')
+    filepath = xdistdir + filepath
 
     if not isfile(filepath):
         print("Invalid filepath: %s" % filepath)
@@ -67,7 +94,7 @@ def main():
 
     for libpkgname in args.lib:
 
-        pkglist: List[str] = ['']
+        pkglist: List[str] = []
         pkglist.append('%s_package() {' % libpkgname)
 
         if len(args.lib) > 1:
@@ -77,8 +104,7 @@ def main():
                 so we strip them out, an example is libgtk+-3 which becomes
                 gtk+ library
             """
-            libname = sub('lib', '', libpkgname)
-            libname = sub('-[0-9].*', '', libname)
+            libname = sub('(lib)?(-[0-9].*)?', '', libpkgname)
             pkglist.append('\tshort_desc="%s library"' % libname)
         else:
             pkglist.append('\tshort_desc+=" - runtime library"')
@@ -94,6 +120,10 @@ def main():
         pkglist.append('}')
 
         if args.replace:
+            if not make_symlink(args.pkgname,
+                                libpkgname, xdistdir + 'srcpkgs'):
+                exit(1)
+
             with open(filepath, 'r') as file_in:
                 if file_in.read().find(libpkgname + '_package()') != -1:
                     print('package name %s already taken' % libpkgname)
