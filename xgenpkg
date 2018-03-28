@@ -239,11 +239,13 @@ def main():
     if args.subpkgname.endswith('-doc'):  # -doc only includes noarch files
         append('\tnoarch=yes')
 
-    if args.depname and '-devel' in args.subpkgname:
-        append('\tdepends="%s-${version}_${revision} %s"' %
-               (args.pkgname, ' '.join(args.depname)))
-    elif args.depname:
-        append('\tdepends="%s"' % ' '.join(args.depname))
+    if args.depname:
+        depname = ' '.join(args.depname)
+        if '-devel' in args.subpkgname:
+            append('\tdepends="%s-${version}_${revision} %s"' %
+                   (args.pkgname, depname))
+        else:
+            append('\tdepends="%s"' % depname)
 
     if args.subpkgname.endswith('-devel'):
         pkglist = devel_checkfile(pkglist, args.pkgname)
