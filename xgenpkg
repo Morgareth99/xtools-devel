@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 
 from typing import List
+from subprocess import run, PIPE
+from shutil import which
 
 W = '\033[0m'  # white (normal)
 R = '\033[31m'  # red
@@ -17,7 +19,6 @@ def cprint(text: str):
 
 def check_path(prog: str):
     """ Checks for :param prog in PATH and exits 1 if not found """
-    from shutil import which
 
     if not which(prog):
         cprint("couldn't find program {}%s".format(G) % prog)
@@ -30,10 +31,7 @@ def get_filelist(mainpkg: str) -> str:
     we later run it over xls that returns us a newline separated list of
     files """
 
-    from subprocess import PIPE, run
-
-    for prog in ['xsubpkg', 'xls']:
-        check_path(prog)
+    (check_path(prog) for prog in ['xsubpkg', 'xls'])
 
     pkgs = run(['xsubpkg', mainpkg], stdout=PIPE).stdout.decode('utf-8')
 
@@ -52,18 +50,15 @@ def doc_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
     """ add vmove declarations to a -doc package """
     filelist: str = get_filelist(mainpkg)
 
-    pkglist.append('\tshort_desc+=" - documentation"')
-    pkglist.append('\tpkg_install() {')
-
     if 'usr/share/doc' in filelist:
-        pkglist.append('\t\tvmove usr/share/doc')
-    else:
-        """ There are no files that belong in a -doc package, fail with an
-        error message to the user. """
-        cprint('no files found for pkg {}%s-doc'.format(G) % mainpkg)
-        exit(1)
+        append = pkglist.append
+        append('\tshort_desc+=" - documentation"')
+        append('\tpkg_install() {')
+        append('\t\tvmove usr/share/doc')
+        return pkglist
 
-    return pkglist
+    cprint('no files found for pkg {}%s-doc'.format(G) % mainpkg)
+    exit(1)
 
 
 def devel_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
@@ -85,8 +80,10 @@ def devel_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
 
     filelist: str = get_filelist(mainpkg)
 
-    pkglist.append('\tshort_desc+=" - development files"')
-    pkglist.append('\tpkg_install() {')
+    append = pkglist.append
+
+    append('\tshort_desc+=" - development files"')
+    append('\tpkg_install() {')
 
     paths: List[str] = ['usr/include',
                         'usr/lib/pkgconfig',
@@ -101,16 +98,16 @@ def devel_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
 
     for path in paths:
         if path in filelist:
-            pkglist.append('\t\tvmove %s' % path)
+            append('\t\tvmove %s' % path)
 
     if '.so -> ' in filelist:
-        pkglist.append('\t\tvmove "usr/lib/*.so"')
+        append('\t\tvmove "usr/lib/*.so"')
 
     if '.a' in filelist:
-        pkglist.append('\t\tvmove "usr/lib/*.a"')
+        append('\t\tvmove "usr/lib/*.a"')
 
     if '.la' in filelist:
-        pkglist.append('\t\tvmove "usr/lib/.la"')
+        append('\t\tvmove "usr/lib/.la"')
 
     return pkglist
 
@@ -118,18 +115,23 @@ def devel_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
 def libs_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
     """ Adds vmove statement for each library found under /usr/lib """
 
-    from re import findall
+    from re import findall, sub
+
+    append = pkglist.append
 
     filelist: str = get_filelist(mainpkg)
+
+    """ This removes occourences of library symlinks, those pollute the search
+    and are to be used only in -devel packages. """
+    filelist = sub(r'.* -> .*\s?', '', filelist)
+
     matches = findall(r'/usr/lib/.*so.', filelist)
 
-    pkglist.append('\tshort_desc+=" - libraries"')
-    pkglist.append('\tpkg_install() {')
+    append('\tshort_desc+=" - libraries"')
+    append('\tpkg_install() {')
 
-    for i, _ in enumerate(matches):
-        if ' -> ' in matches[i]:  # ignore symlinks
-            continue
-        pkglist.append('\t\tvmove %s*' % matches[i][1:])
+    for i in matches:
+        append('\t\tvmove %s*' % i[1:])
 
     return pkglist
 
@@ -138,11 +140,13 @@ def checkfile(pkglist: List[str], paths: List[str], desc: str) -> List[str]:
     """ Adds vmove statement for each path in :param paths, this is the
     generic function that is used in case --type isn't set or is set to an
     invalid type """
-    pkglist.append('\tshort_desc="%s"' % desc)
-    pkglist.append('\tpkg_install() {')
+    append = pkglist.append
+
+    append('\tshort_desc="%s"' % desc)
+    append('\tpkg_install() {')
 
     for path in paths:
-        pkglist.append('\t\tvmove  %s' % path)
+        append('\t\tvmove %s' % path)
 
     return pkglist
 
@@ -161,24 +165,11 @@ def make_symlink(srcpkg: str, dstpkg: str, path: str) -> bool:
         srcpkg = basename(realpath((srcpkg)))
 
     if exists(dstpkg):
-        """ if the symlink points to from srcpkg to dstpkg then we just
-        return true, the symlink is already set correctly """
-        if islink(dstpkg) and realpath(dstpkg) == realpath(srcpkg):
-            return True
-
-        cprint("can't make symlink {}%s{} exists".format(G, W) % dstpkg)
-        return False
+        return islink(dstpkg) and realpath(dstpkg) == realpath(srcpkg)
 
     symlink(srcpkg, dstpkg)
 
-    if islink(dstpkg) and realpath(dstpkg) == realpath(srcpkg):
-        return True
-
-    """ if we reached here that means we have made the symlink but
-    it isn't correct """
-    cprint("Failed to make symlink from {}%s {}-> {}%s".format(G, W, G)
-           % (srcpkg, dstpkg))
-    return False
+    return islink(dstpkg) and realpath(dstpkg) == realpath(srcpkg)
 
 
 def main():
@@ -186,7 +177,6 @@ def main():
 
     from argparse import ArgumentParser
     from os.path import isfile
-    from subprocess import run, PIPE
 
     p = ArgumentParser(description="make xbps-src compliant functions.")
     p.add_argument('--pkg', dest='pkgname', required=True,
@@ -197,7 +187,7 @@ def main():
                    help='list of dependencies of the package')
     p.add_argument('--paths', dest='paths', nargs='*',
                    help='list of paths to be included')
-    p.add_argument('--desc', dest='shortdesc', nargs='*',
+    p.add_argument('--desc', dest='shortdesc', nargs='*', default='',
                    help='description for short_desc')
     p.add_argument('-i', dest='replace', action='store_true', default=False,
                    help='replace dependencies in template')
@@ -206,10 +196,11 @@ def main():
 
     if args.shortdesc:
         args.shortdesc = ' '.join(args.shortdesc)
-    else:
-        args.shortdesc = ''
 
-    if not any(ext in args.subpkgname for ext in ['-doc', '-devel', '-libs']):
+    """ If provided --name doesn't end with any of the 3 know types then
+    cry to the user if no --paths are defined """
+    if not any(args.subpkgname.endswith(ext) for ext in ['-doc', '-devel',
+                                                         '-libs']):
         if not args.paths:
             cprint("no paths defined with {}--paths".format(G))
             exit(1)
@@ -242,42 +233,40 @@ def main():
     or args.paths will be used to determine the pkg_install
     """
     pkglist: List[str] = ['']
-    pkglist.append('%s_package() {' % args.subpkgname)
+    append = pkglist.append
+    append('%s_package() {' % args.subpkgname)
 
-    """ -doc packages only includes documentation which has no arches """
-    if '-doc' in args.subpkgname:
-        pkglist.append('\tnoarch=yes')
+    if args.subpkgname.endswith('-doc'):  # -doc only includes noarch files
+        append('\tnoarch=yes')
 
     if args.depname and '-devel' in args.subpkgname:
-        pkglist.append('\tdepends="%s-${version}_${revision} %s"' %
-                       (args.pkgname, ' '.join(args.depname)))
+        append('\tdepends="%s-${version}_${revision} %s"' %
+               (args.pkgname, ' '.join(args.depname)))
     elif args.depname:
-        pkglist.append('\tdepends="%s"' %
-                       ' '.join(args.depname))
+        append('\tdepends="%s"' % ' '.join(args.depname))
 
-    if '-devel' in args.subpkgname:
+    if args.subpkgname.endswith('-devel'):
         pkglist = devel_checkfile(pkglist, args.pkgname)
-    elif '-doc' in args.subpkgname:
+    elif args.subpkgname.endswith('-doc'):
         pkglist = doc_checkfile(pkglist, args.pkgname)
-    elif '-libs' in args.subpkgname:
-        libs_checkfile(pkglist, args.pkgname)
+    elif args.subpkgname.endswith('-libs'):
+        pkglist = libs_checkfile(pkglist, args.pkgname)
     else:
         pkglist = checkfile(pkglist, args.paths, args.shortdesc)
 
-    pkglist.append('\t}')
-    pkglist.append('}')
+    append('\t}')
+    append('}')
     pkgstring = '\n'.join(pkglist)
 
     print(pkgstring)
 
-    """ CLEANUP
     if args.replace:
-        if not make_symlink(args.pkgname, devname, xdistdir + 'srcpkgs'):
+        if not make_symlink(args.pkgname, args.subpkgname,
+                            xdistdir + 'srcpkgs'):
             return
 
         with open(filepath, "a") as file_out:
             file_out.write(pkgstring)
-    """
 
 
 if __name__ == "__main__":
