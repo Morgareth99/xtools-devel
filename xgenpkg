@@ -12,7 +12,7 @@ P = '\033[35m'  # purple
 
 def cprint(text: str):
     """ Print text with one specific color """
-    print(text+W)
+    print("{}ERROR: {}".format(R, W)+text+W)
 
 
 def check_path(prog: str):
@@ -20,7 +20,7 @@ def check_path(prog: str):
     from shutil import which
 
     if not which(prog):
-        print('couldn\'t find %s, install xtools' % prog)
+        cprint("couldn't find program {}%s".format(G) % prog)
         exit(1)
 
 
@@ -42,10 +42,7 @@ def get_filelist(mainpkg: str) -> str:
         files += run(['xls', pkg], stdout=PIPE).stdout.decode('utf-8')
 
     if not files:
-        cprint('{}ERROR: {}no files found for pkg {}%s{}'.format(R,
-                                                                 W,
-                                                                 G,
-                                                                 W) % mainpkg)
+        cprint('no files found for pkg {}%s'.format(G) % mainpkg)
         exit(1)
 
     return files
@@ -66,8 +63,7 @@ def doc_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
     """ There are no files that belong in a -doc package, fail with an error
     message to the user. """
     if not hasfiles:
-        cprint('{}ERROR: {}no files found for pkg {}%s-doc{}'.format(R, W, G,
-               W) % mainpkg)
+        cprint('no files found for pkg {}%s-doc'.format(G) % mainpkg)
         exit(1)
 
     return pkglist
@@ -148,11 +144,7 @@ def make_symlink(srcpkg: str, dstpkg: str, path: str) -> bool:
         if islink(dstpkg) and realpath(dstpkg) == realpath(srcpkg):
             return True
 
-        cprint("{}ERROR: {}can't make symlink {}%s{} exists".format(R,
-                                                                    W,
-                                                                    G,
-                                                                    W)
-               % dstpkg)
+        cprint("can't make symlink {}%s{} exists".format(G, W) % dstpkg)
         return False
 
     symlink(srcpkg, dstpkg)
@@ -162,12 +154,7 @@ def make_symlink(srcpkg: str, dstpkg: str, path: str) -> bool:
 
     """ if we reached here that means we have made the symlink but
     it isn't correct """
-    cprint("{}ERROR: {}Failed to make symlink from {}%s {}-> {}%s{}".format(R,
-                                                                            W,
-                                                                            G,
-                                                                            W,
-                                                                            G,
-                                                                            W)
+    cprint("Failed to make symlink from {}%s {}-> {}%s".format(G, W, G)
            % (srcpkg, dstpkg))
     return False
 
@@ -195,14 +182,12 @@ def main():
 
     args = p.parse_args()
 
-    args.shortdesc = ' '.join(args.shortdesc)
+    if args.shortdesc:
+        args.shortdesc = ' '.join(args.shortdesc)
 
     if not any(ext in args.subpkgname for ext in ['-doc', '-devel', '-libs']):
         if not args.paths:
-            cprint("{}ERROR: {}no paths defined with {}--paths{}".format(R,
-                                                                         W,
-                                                                         O,
-                                                                         W))
+            cprint("no paths defined with {}--paths".format(G))
             exit(1)
 
     """
@@ -215,7 +200,7 @@ def main():
     filepath = xdistdir + filepath
 
     if not isfile(filepath):
-        print("Invalid filepath: %s" % filepath)
+        cprint("Invalid filepath: {}%s".format(G) % filepath)
         exit(2)
 
     """ Start creating a xbps-src template function
