@@ -53,12 +53,9 @@ def doc_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
     filelist: str = get_filelist(mainpkg)
     hasfiles: bool = False
 
-    paths = ['usr/share/doc', ('usr/share/%s/doc' % mainpkg)]
-
-    for path in paths:
-        if path in filelist:
-            pkglist.append('\t\tvmove %s' % path)
-            hasfiles = True
+    if 'usr/share/doc' in filelist:
+        pkglist.append('\t\tvmove usr/share/doc')
+        hasfiles = True
 
     """ There are no files that belong in a -doc package, fail with an error
     message to the user. """
@@ -124,11 +121,10 @@ def libs_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
     matches = findall(r'/usr/lib/.*so.', filelist)
 
     for i, _ in enumerate(matches):
-        if ' -> ' in matches[i]:
+        if ' -> ' in matches[i]:  # ignore symlinks
             continue
-        matches[i] = matches[i].replace('.so.', '')
-        matches[i] = matches[i].replace('/usr/lib/', '')
-        pkglist.append('\t\tvmove usr/lib/%s.so.*' % matches[i])
+        matches[i] = matches[i].replace('/usr/', 'usr/')
+        pkglist.append('\t\tvmove %s*' % matches[i])
 
     return pkglist
 
@@ -253,7 +249,6 @@ def main():
 
     pkglist.append('\tpkg_install() {')
 
-    """ XXX: WRITE SPECIFIC WRAPPER FOR SOME TYPES """
     if '-devel' in args.subpkgname:
         pkglist = devel_checkfile(pkglist, args.pkgname)
     elif '-doc' in args.subpkgname:
