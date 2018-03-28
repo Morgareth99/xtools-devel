@@ -51,15 +51,15 @@ def get_filelist(mainpkg: str) -> str:
 def doc_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
     """ add vmove declarations to a -doc package """
     filelist: str = get_filelist(mainpkg)
-    hasfiles: bool = False
+
+    pkglist.append('\tshort_desc+=" - documentation"')
+    pkglist.append('\tpkg_install() {')
 
     if 'usr/share/doc' in filelist:
         pkglist.append('\t\tvmove usr/share/doc')
-        hasfiles = True
-
-    """ There are no files that belong in a -doc package, fail with an error
-    message to the user. """
-    if not hasfiles:
+    else:
+        """ There are no files that belong in a -doc package, fail with an
+        error message to the user. """
         cprint('no files found for pkg {}%s-doc'.format(G) % mainpkg)
         exit(1)
 
@@ -84,6 +84,9 @@ def devel_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
         symlinked """
 
     filelist: str = get_filelist(mainpkg)
+
+    pkglist.append('\tshort_desc+=" - development files"')
+    pkglist.append('\tpkg_install() {')
 
     paths: List[str] = ['usr/include',
                         'usr/lib/pkgconfig',
@@ -120,19 +123,24 @@ def libs_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
     filelist: str = get_filelist(mainpkg)
     matches = findall(r'/usr/lib/.*so.', filelist)
 
+    pkglist.append('\tshort_desc+=" - libraries"')
+    pkglist.append('\tpkg_install() {')
+
     for i, _ in enumerate(matches):
         if ' -> ' in matches[i]:  # ignore symlinks
             continue
-        matches[i] = matches[i].replace('/usr/', 'usr/')
-        pkglist.append('\t\tvmove %s*' % matches[i])
+        pkglist.append('\t\tvmove %s*' % matches[i][1:])
 
     return pkglist
 
 
-def checkfile(pkglist: List[str], paths: List[str]) -> List[str]:
+def checkfile(pkglist: List[str], paths: List[str], desc: str) -> List[str]:
     """ Adds vmove statement for each path in :param paths, this is the
     generic function that is used in case --type isn't set or is set to an
     invalid type """
+    pkglist.append('\tshort_desc="%s"' % desc)
+    pkglist.append('\tpkg_install() {')
+
     for path in paths:
         pkglist.append('\t\tvmove  %s' % path)
 
@@ -198,6 +206,8 @@ def main():
 
     if args.shortdesc:
         args.shortdesc = ' '.join(args.shortdesc)
+    else:
+        args.shortdesc = ''
 
     if not any(ext in args.subpkgname for ext in ['-doc', '-devel', '-libs']):
         if not args.paths:
@@ -217,6 +227,15 @@ def main():
         cprint("Invalid filepath: {}%s".format(G) % filepath)
         exit(2)
 
+    """ Check early if the function is already matched, this avoids creating
+    the string in the first place which is the costlier process """
+    if args.replace:
+        with open(filepath, 'r') as file_in:
+            if file_in.read().find(args.subpkgname + '_package()') != -1:
+                cprint("package function {}%s {}already matched".format(G, W)
+                       % args.subpkgname)
+                exit(2)
+
     """ Start creating a xbps-src template function
     this creation will certainly go as far as pkg_install, from
     there specific wrappers for certain packages will take place
@@ -229,25 +248,12 @@ def main():
     if '-doc' in args.subpkgname:
         pkglist.append('\tnoarch=yes')
 
-    if args.shortdesc:
-        pkglist.append('\tshort_desc="%s"' % args.shortdesc)
-    elif not args.shortdesc and '-devel' in args.subpkgname:
-        pkglist.append('\tshort_desc+=" - development files"')
-    elif not args.shortdesc and '-doc' in args.subpkgname:
-        pkglist.append('\tshort_desc+=" - documentation"')
-    elif not args.shortdesc and '-libs' in args.subpkgname:
-        pkglist.append('\tshort_desc+=" - libraries"')
-    else:
-        pkglist.append('\tshort_desc=""')
-
     if args.depname and '-devel' in args.subpkgname:
         pkglist.append('\tdepends="%s-${version}_${revision} %s"' %
                        (args.pkgname, ' '.join(args.depname)))
     elif args.depname:
         pkglist.append('\tdepends="%s"' %
                        ' '.join(args.depname))
-
-    pkglist.append('\tpkg_install() {')
 
     if '-devel' in args.subpkgname:
         pkglist = devel_checkfile(pkglist, args.pkgname)
@@ -256,17 +262,7 @@ def main():
     elif '-libs' in args.subpkgname:
         libs_checkfile(pkglist, args.pkgname)
     else:
-        pkglist = checkfile(pkglist, args.paths)
-
-    """ CLEANUP
-    if args.replace:
-        with open(filepath, 'r') as file_in:
-            f = file_in.read()
-
-            if f.find(devname + '_package()') != -1:
-                print('package function already defined: %s' % devname)
-                exit(2)
-    """
+        pkglist = checkfile(pkglist, args.paths, args.shortdesc)
 
     pkglist.append('\t}')
     pkglist.append('}')
