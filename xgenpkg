@@ -115,6 +115,24 @@ def devel_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
     return pkglist
 
 
+def libs_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
+    """ Adds vmove statement for each library found under /usr/lib """
+
+    from re import findall
+
+    filelist: str = get_filelist(mainpkg)
+    matches = findall(r'/usr/lib/.*so.', filelist)
+
+    for i, _ in enumerate(matches):
+        if ' -> ' in matches[i]:
+            continue
+        matches[i] = matches[i].replace('.so.', '')
+        matches[i] = matches[i].replace('/usr/lib/', '')
+        pkglist.append('\t\tvmove usr/lib/%s.so.*' % matches[i])
+
+    return pkglist
+
+
 def checkfile(pkglist: List[str], paths: List[str]) -> List[str]:
     """ Adds vmove statement for each path in :param paths, this is the
     generic function that is used in case --type isn't set or is set to an
@@ -241,7 +259,7 @@ def main():
     elif '-doc' in args.subpkgname:
         pkglist = doc_checkfile(pkglist, args.pkgname)
     elif '-libs' in args.subpkgname:
-        return
+        libs_checkfile(pkglist, args.pkgname)
     else:
         pkglist = checkfile(pkglist, args.paths)
 
