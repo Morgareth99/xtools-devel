@@ -1,0 +1,290 @@
+#!/usr/bin/env python3
+
+from typing import List
+
+W = '\033[0m'  # white (normal)
+R = '\033[31m'  # red
+G = '\033[32m'  # green
+O = '\033[33m'  # orange
+B = '\033[34m'  # blue
+P = '\033[35m'  # purple
+
+
+def cprint(text: str):
+    """ Print text with one specific color """
+    print(text+W)
+
+
+def check_path(prog: str):
+    """ Checks for :param prog in PATH and exits 1 if not found """
+    from shutil import which
+
+    if not which(prog):
+        print('couldn\'t find %s, install xtools' % prog)
+        exit(1)
+
+
+def get_filelist(mainpkg: str) -> str:
+    """ Uses xsubpkg and xls to get list of packages
+    xsubpkg returns the main package and all subpackages of a given name
+    we later run it over xls that returns us a newline separated list of
+    files """
+
+    from subprocess import PIPE, run
+
+    for prog in ['xsubpkg', 'xls']:
+        check_path(prog)
+
+    pkgs = run(['xsubpkg', mainpkg], stdout=PIPE).stdout.decode('utf-8')
+
+    files: str = ""
+    for pkg in pkgs.splitlines():
+        files += run(['xls', pkg], stdout=PIPE).stdout.decode('utf-8')
+
+    if not files:
+        cprint('{}ERROR: {}no files found for pkg {}%s{}'.format(R,
+                                                                 W,
+                                                                 G,
+                                                                 W) % mainpkg)
+        exit(1)
+
+    return files
+
+
+def doc_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
+    """ add vmove declarations to a -doc package """
+    filelist: str = get_filelist(mainpkg)
+    hasfiles: bool = False
+
+    paths = ['usr/share/doc', ('usr/share/%s/doc' % mainpkg)]
+
+    for path in paths:
+        if path in filelist:
+            pkglist.append('\t\tvmove %s' % path)
+            hasfiles = True
+
+    """ There are no files that belong in a -doc package, fail with an error
+    message to the user. """
+    if not hasfiles:
+        cprint('{}ERROR: {}no files found for pkg {}%s-doc{}'.format(R, W, G,
+               W) % mainpkg)
+        exit(1)
+
+    return pkglist
+
+
+def devel_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
+    """ adds vmove declarations to a -devel package function
+        pkglist -> List of strings that make up the definition up
+        untill 'pkg_install() {'
+        filelist -> single string that has all files, separated by newline
+
+        it checks for the presence of a path in filelist for each path defined
+        in paths, for each match it appends to pkglist a vmove path statement
+
+        it also detects symlinks by parsing over all lines and checking if one
+        contains ' -> ', it then splits it and gets the first half and checks
+        if it ends with .so or .la and if matched it adds a glob vmove
+        statement
+
+        if no ' -> ' is found it still will check for .a since those aren't
+        symlinked """
+
+    filelist: str = get_filelist(mainpkg)
+
+    paths: List[str] = ['usr/include',
+                        'usr/lib/pkgconfig',
+                        'usr/share/pkgconfig',
+                        'usr/lib/cmake',
+                        'usr/share/cmake',
+                        'usr/share/aclocal',
+                        'usr/share/man/man3',
+                        'usr/share/gtk-doc',
+                        'usr/share/gir-1.0',
+                        'usr/share/vala']
+
+    for path in paths:
+        if path in filelist:
+            pkglist.append('\t\tvmove %s' % path)
+
+    if '.so -> ' in filelist:
+        pkglist.append('\t\tvmove "usr/lib/*.so"')
+
+    if '.a' in filelist:
+        pkglist.append('\t\tvmove "usr/lib/*.a"')
+
+    if '.la' in filelist:
+        pkglist.append('\t\tvmove "usr/lib/.la"')
+
+    return pkglist
+
+
+def checkfile(pkglist: List[str], paths: List[str]) -> List[str]:
+    """ Adds vmove statement for each path in :param paths, this is the
+    generic function that is used in case --type isn't set or is set to an
+    invalid type """
+    for path in paths:
+        pkglist.append('\t\tvmove  %s' % path)
+
+    return pkglist
+
+
+def make_symlink(srcpkg: str, dstpkg: str, path: str) -> bool:
+    """ creates a symlink for XBPS subpkackages """
+    from os import chdir, symlink
+    from os.path import exists, realpath, islink, basename
+
+    chdir(path)
+
+    """ if :param srcpkg given to us is a symlink then change it to the
+    real one, we don't want to make a symlink to a symlink, all symlinks
+    must go to the main package """
+    if islink(srcpkg):
+        srcpkg = basename(realpath((srcpkg)))
+
+    if exists(dstpkg):
+        """ if the symlink points to from srcpkg to dstpkg then we just
+        return true, the symlink is already set correctly """
+        if islink(dstpkg) and realpath(dstpkg) == realpath(srcpkg):
+            return True
+
+        cprint("{}ERROR: {}can't make symlink {}%s{} exists".format(R,
+                                                                    W,
+                                                                    G,
+                                                                    W)
+               % dstpkg)
+        return False
+
+    symlink(srcpkg, dstpkg)
+
+    if islink(dstpkg) and realpath(dstpkg) == realpath(srcpkg):
+        return True
+
+    """ if we reached here that means we have made the symlink but
+    it isn't correct """
+    cprint("{}ERROR: {}Failed to make symlink from {}%s {}-> {}%s{}".format(R,
+                                                                            W,
+                                                                            G,
+                                                                            W,
+                                                                            G,
+                                                                            W)
+           % (srcpkg, dstpkg))
+    return False
+
+
+def main():
+    check_path('xdistdir')
+
+    from argparse import ArgumentParser
+    from os.path import isfile
+    from subprocess import run, PIPE
+
+    p = ArgumentParser(description="make xbps-src compliant functions.")
+    p.add_argument('--pkg', dest='pkgname', required=True,
+                   help='name of the main package')
+    p.add_argument('--name', dest='subpkgname', required=True,
+                   help='complete name of the subpkg')
+    p.add_argument('--deps', dest='depname', nargs='*',
+                   help='list of dependencies of the package')
+    p.add_argument('--paths', dest='paths', nargs='*',
+                   help='list of paths to be included')
+    p.add_argument('--desc', dest='shortdesc', nargs='*',
+                   help='description for short_desc')
+    p.add_argument('-i', dest='replace', action='store_true', default=False,
+                   help='replace dependencies in template')
+
+    args = p.parse_args()
+
+    args.shortdesc = ' '.join(args.shortdesc)
+
+    if not any(ext in args.subpkgname for ext in ['-doc', '-devel', '-libs']):
+        if not args.paths:
+            cprint("{}ERROR: {}no paths defined with {}--paths{}".format(R,
+                                                                         W,
+                                                                         O,
+                                                                         W))
+            exit(1)
+
+    """
+        Create a path by taking xdistdir and add srcpkgs/ the pkgname and
+        /template
+    """
+    filepath: str = 'srcpkgs/' + args.pkgname + '/template'
+    xdistdir = run('xdistdir', stdout=PIPE).stdout.decode('utf-8')
+    xdistdir = xdistdir.replace('\n', '/')
+    filepath = xdistdir + filepath
+
+    if not isfile(filepath):
+        print("Invalid filepath: %s" % filepath)
+        exit(2)
+
+    """ Start creating a xbps-src template function
+    this creation will certainly go as far as pkg_install, from
+    there specific wrappers for certain packages will take place
+    or args.paths will be used to determine the pkg_install
+    """
+    pkglist: List[str] = ['']
+    pkglist.append('%s_package() {' % args.subpkgname)
+
+    """ -doc packages only includes documentation which has no arches """
+    if '-doc' in args.subpkgname:
+        pkglist.append('\tnoarch=yes')
+
+    if args.shortdesc:
+        pkglist.append('\tshort_desc="%s"' % args.shortdesc)
+    elif not args.shortdesc and '-devel' in args.subpkgname:
+        pkglist.append('\tshort_desc+=" - development files"')
+    elif not args.shortdesc and '-doc' in args.subpkgname:
+        pkglist.append('\tshort_desc+=" - documentation"')
+    elif not args.shortdesc and '-libs' in args.subpkgname:
+        pkglist.append('\tshort_desc+=" - libraries"')
+    else:
+        pkglist.append('\tshort_desc=""')
+
+    if args.depname and '-devel' in args.subpkgname:
+        pkglist.append('\tdepends="%s-${version}_${revision} %s"' %
+                       (args.pkgname, ' '.join(args.depname)))
+    elif args.depname:
+        pkglist.append('\tdepends="%s"' %
+                       ' '.join(args.depname))
+
+    pkglist.append('\tpkg_install() {')
+
+    """ XXX: WRITE SPECIFIC WRAPPER FOR SOME TYPES """
+    if '-devel' in args.subpkgname:
+        pkglist = devel_checkfile(pkglist, args.pkgname)
+    elif '-doc' in args.subpkgname:
+        pkglist = doc_checkfile(pkglist, args.pkgname)
+    elif '-libs' in args.subpkgname:
+        return
+    else:
+        pkglist = checkfile(pkglist, args.paths)
+
+    """ CLEANUP
+    if args.replace:
+        with open(filepath, 'r') as file_in:
+            f = file_in.read()
+
+            if f.find(devname + '_package()') != -1:
+                print('package function already defined: %s' % devname)
+                exit(2)
+    """
+
+    pkglist.append('\t}')
+    pkglist.append('}')
+    pkgstring = '\n'.join(pkglist)
+
+    print(pkgstring)
+
+    """ CLEANUP
+    if args.replace:
+        if not make_symlink(args.pkgname, devname, xdistdir + 'srcpkgs'):
+            return
+
+        with open(filepath, "a") as file_out:
+            file_out.write(pkgstring)
+    """
+
+
+if __name__ == "__main__":
+    main()
