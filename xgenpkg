@@ -46,22 +46,39 @@ def get_filelist(mainpkg: str) -> str:
     return files
 
 
-def doc_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
+def doc_checkfile(pkglist: List[str],
+                  mainpkg: str,
+                  desc=None,
+                  paths=None) -> List[str]:
     """ add vmove declarations to a -doc package """
     filelist: str = get_filelist(mainpkg)
 
-    if 'usr/share/doc' in filelist:
-        append = pkglist.append
+    append = pkglist.append
+
+    if desc:
+        append('\tshort_desc="%s"' % desc)
+    else:
         append('\tshort_desc+=" - documentation"')
-        append('\tpkg_install() {')
+
+    append('\tpkg_install() {')
+
+    if paths:
+        for path in paths:
+            append('\t\tvmove %s' % path)
+
+    if 'usr/share/doc' in filelist:
         append('\t\tvmove usr/share/doc')
-        return pkglist
+    else:
+        cprint('no files found for pkg {}%s-doc'.format(G) % mainpkg)
+        exit(1)
 
-    cprint('no files found for pkg {}%s-doc'.format(G) % mainpkg)
-    exit(1)
+    return pkglist
 
 
-def devel_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
+def devel_checkfile(pkglist: List[str],
+                    mainpkg: str,
+                    desc=None,
+                    paths=None) -> List[str]:
     """ adds vmove declarations to a -devel package function
         pkglist -> List of strings that make up the definition up
         untill 'pkg_install() {'
@@ -82,8 +99,16 @@ def devel_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
 
     append = pkglist.append
 
-    append('\tshort_desc+=" - development files"')
+    if desc:
+        append('\tshort_desc="%s"' % desc)
+    else:
+        append('\tshort_desc+=" - development files"')
+
     append('\tpkg_install() {')
+
+    if paths:
+        for path in paths:
+            append('\t\tvmove %s' % path)
 
     paths: List[str] = ['usr/include',
                         'usr/lib/pkgconfig',
@@ -107,12 +132,15 @@ def devel_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
         append('\t\tvmove "usr/lib/*.a"')
 
     if '.la' in filelist:
-        append('\t\tvmove "usr/lib/.la"')
+        append('\t\tvmove "usr/lib/*.la"')
 
     return pkglist
 
 
-def libs_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
+def libs_checkfile(pkglist: List[str],
+                   mainpkg: str,
+                   desc=None,
+                   paths=None) -> List[str]:
     """ Adds vmove statement for each library found under /usr/lib """
 
     from re import findall, sub
@@ -125,13 +153,21 @@ def libs_checkfile(pkglist: List[str], mainpkg: str) -> List[str]:
     and are to be used only in -devel packages. """
     filelist = sub(r'.* -> .*\s?', '', filelist)
 
-    matches = findall(r'/usr/lib/.*so.', filelist)
+    matches = findall(r'usr/lib/.*so.', filelist)
 
-    append('\tshort_desc+=" - libraries"')
+    if desc:
+        append('\tshort_desc="%s"' % desc)
+    else:
+        append('\tshort_desc+=" - libraries"')
+
     append('\tpkg_install() {')
 
+    if paths:
+        for path in paths:
+            append('\t\tvmove %s' % path)
+
     for i in matches:
-        append('\t\tvmove %s*' % i[1:])
+        append('\t\tvmove %s*' % i)
 
     return pkglist
 
@@ -239,7 +275,10 @@ def main():
     if args.subpkgname.endswith('-doc'):  # -doc only includes noarch files
         append('\tnoarch=yes')
 
-    if args.depname:
+    if not args.depname:
+        if args.subpkgname.endswith('-devel'):
+            append('\tdepends="%s-${version}_${revision}"' % args.pkgname)
+    else:
         depname = ' '.join(args.depname)
         if '-devel' in args.subpkgname:
             append('\tdepends="%s-${version}_${revision} %s"' %
@@ -248,11 +287,17 @@ def main():
             append('\tdepends="%s"' % depname)
 
     if args.subpkgname.endswith('-devel'):
-        pkglist = devel_checkfile(pkglist, args.pkgname)
+        pkglist = devel_checkfile(pkglist,
+                                  args.pkgname,
+                                  args.shortdesc,
+                                  args.paths)
     elif args.subpkgname.endswith('-doc'):
-        pkglist = doc_checkfile(pkglist, args.pkgname)
+        pkglist = doc_checkfile(pkglist,
+                                args.pkgname,
+                                args.shortdesc,
+                                args.paths)
     elif args.subpkgname.endswith('-libs'):
-        pkglist = libs_checkfile(pkglist, args.pkgname)
+        pkglist = libs_checkfile(pkglist, args.pkgname, args.shortdesc)
     else:
         pkglist = checkfile(pkglist, args.paths, args.shortdesc)
 
