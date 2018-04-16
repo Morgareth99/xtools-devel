@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 
+""" TODO:
+    1. add --prefix ( or --append, --add, name to be decided ) to args
+    which takes a string and adds it to the definition
+    like: --prefix noarch=yes
+    2. cleanup, make code more common
+"""
+
 from typing import List
 from subprocess import run, PIPE
 from shutil import which
@@ -55,6 +62,8 @@ def doc_checkfile(pkglist: List[str],
 
     append = pkglist.append
 
+    append('\tnoarch=yes')
+
     if desc:
         append('\tshort_desc="%s"' % desc)
     else:
@@ -78,7 +87,8 @@ def doc_checkfile(pkglist: List[str],
 def devel_checkfile(pkglist: List[str],
                     mainpkg: str,
                     desc=None,
-                    paths=None) -> List[str]:
+                    paths=None,
+                    deps=None) -> List[str]:
     """ adds vmove declarations to a -devel package function
         pkglist -> List of strings that make up the definition up
         untill 'pkg_install() {'
@@ -98,6 +108,11 @@ def devel_checkfile(pkglist: List[str],
     filelist: str = get_filelist(mainpkg)
 
     append = pkglist.append
+
+    if not deps:
+        append('\tdepends="%s-${version}_${revision}"' % mainpkg)
+    else:
+        append('\tdepends="%s-${version}_${revision} %s"' % (mainpkg, ' '.join(deps)))
 
     if desc:
         append('\tshort_desc="%s"' % desc)
@@ -231,7 +246,7 @@ def main():
     args = p.parse_args()
 
     if args.shortdesc:
-        args.shortdesc = ' '.join(args.shortdesc)
+        shortdesc = ' '.join(args.shortdesc)
 
     """ If provided --name doesn't end with any of the 3 know types then
     cry to the user if no --paths are defined """
@@ -272,34 +287,25 @@ def main():
     append = pkglist.append
     append('%s_package() {' % args.subpkgname)
 
-    if args.subpkgname.endswith('-doc'):  # -doc only includes noarch files
-        append('\tnoarch=yes')
-
-    if not args.depname:
-        if args.subpkgname.endswith('-devel'):
-            append('\tdepends="%s-${version}_${revision}"' % args.pkgname)
-    else:
-        depname = ' '.join(args.depname)
-        if '-devel' in args.subpkgname:
-            append('\tdepends="%s-${version}_${revision} %s"' %
-                   (args.pkgname, depname))
-        else:
-            append('\tdepends="%s"' % depname)
-
     if args.subpkgname.endswith('-devel'):
         pkglist = devel_checkfile(pkglist,
                                   args.pkgname,
-                                  args.shortdesc,
-                                  args.paths)
+                                  shortdesc,
+                                  args.paths,
+                                  args.depname)
     elif args.subpkgname.endswith('-doc'):
         pkglist = doc_checkfile(pkglist,
                                 args.pkgname,
-                                args.shortdesc,
+                                shortdesc,
                                 args.paths)
     elif args.subpkgname.endswith('-libs'):
-        pkglist = libs_checkfile(pkglist, args.pkgname, args.shortdesc)
+        pkglist = libs_checkfile(pkglist, args.pkgname, shortdesc)
     else:
-        pkglist = checkfile(pkglist, args.paths, args.shortdesc)
+        if not args.depname:
+            append('\tdepends="%s"' % args.pkgname)
+        else:
+            append('\tdepends="%s"' % ' '.join(args.depname))
+        pkglist = checkfile(pkglist, args.paths, shortdesc)
 
     append('\t}')
     append('}')
