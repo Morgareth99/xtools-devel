@@ -2,8 +2,10 @@
 # stub functions for the system
 vopt_if() {
 	# delimitators of the packages
-	# vopt -> delimitates the start of the vopt statement
-	# example $(vopt_if var pkgs) -> vopt/var/pkgs
+	# zzopt -> delimitates the start of the vopt statement
+	# example $(vopt_if var pkgs) -> zzopt/var/pkgs
+	# we use zzopt so that it is sorted to the end of the dependency string
+	# vopt might be sorted before non-vopt dependencies like zlib-devel
 	# -------------------------------------------------------------------------
 	# / -> delimitates between spaces in a vopt statement
 	# example $(vopt_if var pkgs) -> vopt/var/pkgs
@@ -17,9 +19,9 @@ vopt_if() {
 	# > -> delimitates the end of the string
 	# example $(vopt_if var pkg1) -> vopt/var/pkg1>
 	if [ "$3" ] ; then
-		printf "vopt/%s/'%s'/'%s'>\\n" "$1" "${2// /|}" "${3// /|}"
+		printf "zzopt/%s/'%s'/'%s'>\\n" "$1" "${2// /|}" "${3// /|}"
 	else
-		printf "vopt/%s/'%s'>\\n" "$1" "${2// /|}"
+		printf "zzopt/%s/'%s'>\\n" "$1" "${2// /|}"
 	fi
 }
 
