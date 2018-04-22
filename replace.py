@@ -10,18 +10,26 @@ def format_deplist(pkgs: str, deptype: str) -> str:
         actions done for the symbols given:
         1. create 'pkgstr' that is pkgs with deptype and formatting for XBPS
            dependency template
-        2. wrap the text to 80 chars, no long_words or hyphen_breaks
+        2. replace 'zzopt' with '$(vopt_if'
+        3. replace '>' with ')'
+        4. replace '|' with ' '
+        5. wrap the text to 80 chars, no long_words or hyphen_breaks
          also add ' ' as a subsequent_indent
-        3. use wrap.fill to return a single multi-line string
-        4. replace '/' and '/' with ' '
-        5. replace '>' with ')'
-        6. replace 'vopt' with '$(vopt_if'
-        7. return the string
+        6. use wrap.fill to return a single multi-line string
+        7. replace '/' with ' '
+        8. return the string
     """
 
     from textwrap import TextWrapper
 
-    pkgstr: str = deptype + '="' + pkgs.replace('vopt', '$(vopt_if') + '"'
+    pkgstr: str = deptype + '="' + pkgs.replace('zzopt', '$(vopt_if') + '"'
+
+    """ Before formatting the string we replace > with ) to match the
+    $(vopt_if and we also replace | with whitespace so that text
+    formatting can separate it into a an whitespace, which is allowed
+    since we put the dependencies inside a ' ' block """
+    pkgstr = pkgstr.replace('>', ')')
+    pkgstr = pkgstr.replace('|', ' ')
 
     text_wrapper = TextWrapper(width=80,
                                break_long_words=False,
@@ -30,9 +38,10 @@ def format_deplist(pkgs: str, deptype: str) -> str:
 
     pkgstr = text_wrapper.fill(pkgstr)
 
+    """ / must be replaced with a space after the string is Formatted because
+    it can't be separated into a newspace, only the dependencies inside the
+    same group marked by the | char """
     pkgstr = pkgstr.replace('/', ' ')
-    pkgstr = pkgstr.replace('|', ' ')
-    pkgstr = pkgstr.replace('>', ')')
 
     return pkgstr
 
