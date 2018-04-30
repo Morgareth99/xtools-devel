@@ -112,7 +112,7 @@ def devel_checkfile(pkglist: List[str],
     if not deps:
         append('\tdepends="%s-${version}_${revision}"' % mainpkg)
     else:
-        append('\tdepends="%s-${version}_${revision} %s"' % (mainpkg, ' '.join(deps)))
+        append('\tdepends="%s-${version}_${revision} %s"' % (mainpkg, deps))
 
     if desc:
         append('\tshort_desc="%s"' % desc)
@@ -244,6 +244,8 @@ def main():
                    help='replace dependencies in template')
 
     args = p.parse_args()
+
+    shortdesc = None
 
     if args.shortdesc:
         shortdesc = ' '.join(args.shortdesc)
