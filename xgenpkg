@@ -226,9 +226,8 @@ def main():
 
     args = p.parse_args()
 
-    shortdesc = None
-
     if args.shortdesc:
+        shortdesc = None
         shortdesc = ' '.join(args.shortdesc)
 
     """ If provided --name doesn't end with any of the 3 know types then
@@ -270,9 +269,8 @@ def main():
     there specific wrappers for certain packages will take place
     or args.paths will be used to determine the pkg_install
     """
-    pkglist: List[str] = ['']
+    pkglist: List[str] = ['%s_package() {' % args.subpkgname]
     append = pkglist.append
-    append('%s_package() {' % args.subpkgname)
 
     if args.subpkgname.endswith('-devel'):
         pkglist = devel_checkfile(pkglist,
@@ -301,10 +299,19 @@ def main():
     print(pkgstring)
 
     if args.replace:
-        if not make_symlink(args.pkgname, args.subpkgname, xdistdir):
+        if not make_symlink(args.pkgname, args.subpkgname):
             return
 
+        with open(filepath, "r") as file_out:
+            last_line = file_out.readlines()[-1]
+            if last_line not in ['\n', '\r\n']:
+                add_newline = True
+            else:
+                add_newline = False
+
         with open(filepath, "a") as file_out:
+            if add_newline:
+                file_out.write('\n')
             file_out.write(pkgstring)
 
 
