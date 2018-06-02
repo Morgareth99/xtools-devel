@@ -226,8 +226,8 @@ def main():
 
     args = p.parse_args()
 
+    shortdesc = None
     if args.shortdesc:
-        shortdesc = None
         shortdesc = ' '.join(args.shortdesc)
 
     """ If provided --name doesn't end with any of the 3 know types then
