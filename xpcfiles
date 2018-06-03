@@ -1,4 +1,6 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
+
 # xpcfiles PKGS ... - Show all .pc files in a package and it's subpackages
 for pkg; do
 	for subpkg in $(xsubpkg "$pkg") ; do

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-only
+
 # stub functions for the system
 vopt_if() {
 	# delimitators of the packages
