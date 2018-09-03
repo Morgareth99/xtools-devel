@@ -1,0 +1,13 @@
+#!/bin/sh
+# perms
+# print out permissions in the format
+# <path> <octal> <user> <group>
+# 
+# It is the format used in make_dirs
+# this script is meant for checking permissions of directories
+# when converting them to make_dirs format
+while [ $# -gt 0 ]
+do
+	stat -c "%n %a %U %G" "$1"
+	shift
+done
