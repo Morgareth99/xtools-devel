@@ -1,0 +1,4 @@
+#!/bin/sh
+# Finds any broken symlinks under a path
+# defaults to srcpkgs/ assuming you're in your void-packages directory
+find "${1:-srcpkgs/}" -maxdepth 1 -xtype l
