@@ -1,15 +1,16 @@
 #!/bin/sh
 # Takes a list of paths and produces definitions for empty
 # directories
-[ $# -lt 1 ] && exit 1
+set -- $@
+[ $# -lt 4 ] && exit 1
 
-printf "%s" "make_dirs=\"$1 0755 root root"
-[ $# -lt 2 ] && echo \" || echo ""
-shift
+printf "%s" "make_dirs=\"$1 $2 $3 $4"
+[ $# -lt 5 ] && echo \" || echo ""
+shift ; shift ; shift ; shift
 
-while [ $# -gt 0 ]
+while [ $# -gt 3 ]
 do
-	printf "%s" " $1 0755 root root"
-	[ $# -lt 2 ] && echo \" || echo ""
-	shift
+	printf "%s" " $1 $2 $3 $4"
+	[ $# -lt 5 ] && echo \" || echo ""
+	shift ; shift ; shift ; shift
 done
