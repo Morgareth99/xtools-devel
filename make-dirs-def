@@ -2,15 +2,17 @@
 # Takes a list of paths and produces definitions for empty
 # directories
 set -- $@
-[ $# -lt 4 ] && exit 1
+[ $# -lt 4 ] &&
+echo "NEEDS 4 OR MORE ARGS PASSED TO IT" >&2 &&
+exit 1
 
 printf "%s" "make_dirs=\"$1 $2 $3 $4"
-[ $# -lt 5 ] && echo \" || echo ""
 shift ; shift ; shift ; shift
+[ $# -lt 4 ] && echo \" || echo ""
 
 while [ $# -gt 3 ]
 do
 	printf "%s" " $1 $2 $3 $4"
-	[ $# -lt 5 ] && echo \" || echo ""
 	shift ; shift ; shift ; shift
+	[ $# -lt 4 ] && echo \" || echo ""
 done
