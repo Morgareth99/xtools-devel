@@ -8,6 +8,9 @@
 # when converting them to make_dirs format
 while [ $# -gt 0 ]
 do
-	stat -c "%n %a %U %G" "$1"
+	# If the path doesn't exist assume it is 755 root root
+	[ -e "$1" ] &&
+	stat -c "%n %a %U %G" "$1" ||
+	echo "$1 0755 root root"
 	shift
 done
