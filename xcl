@@ -2,8 +2,8 @@
 # xcl - show changelogs from xbps-src templates into the terminal
 goto_fail() {
 	# We reach here if no changelog files are found
-	ansi --red-intense "NO CHANGELOGS FOUND FOR "
-	ansi -n "${pkgname}"
+	ansi --red-intense -n "NO CHANGELOGS FOUND FOR "
+	ansi "${pkgname}"
 	return 1
 }
 
@@ -36,8 +36,8 @@ find_changelog() {
 	# Check if we have the directory for the distfile, if not we use xbps-src
 	# to fetch them, we also check if the dir is empty
 	if ! [ -d "$dirpath" ] || ! find "$dirpath" -type f ! -empty; then
-		ansi --yellow-intense "FETCHING DISTFILE FOR "
-		ansi -n "${pkgname}"
+		ansi --yellow-intense -n "FETCHING DISTFILE FOR "
+		ansi "${pkgname}"
 		xgensum -f -i srcpkgs/"${pkgname}" >/dev/null 2>&1
 	fi
 
@@ -68,7 +68,7 @@ find_changelog() {
 				html) tar --to-stdout --extract --file="$archive" "$clf" \
 					| elinks -dump -dump-color-mode 1 | less -R ;;
 				md) tar --to-stdout --extract --file="$archive" "$clf" \
-					| pandoc | lynx -stdin -dump | less -R ;;
+					| mdcat | less -R ;;
 				*) tar --to-stdout --extract --file="$archive" "$clf" \
 					| less -R ;;
 			esac
@@ -76,6 +76,21 @@ find_changelog() {
 			return 0
 		fi
 	done
+
+	if [ "$changelog" ]
+	then
+		suffix="${changelog##*/}"
+		suffix="${suffix##*.}"
+
+		case "$suffix" in
+			html) curl -L "$changelog" \
+				| elinks -dump -dump-color-mode 1 | less -R ;;
+			md) curl -L "$changelog" \
+				| pandoc | lynx -stdin -dump | less -R ;;
+			*) curl -L "$changelog" \
+				| less -R ;;
+		esac
+	fi
 
 	goto_fail "${pkgname}"
 }
@@ -87,9 +102,9 @@ pkg="${1:-$(git rev-parse --abbrev-ref HEAD)}"
 
 [ -f "${xdistdir}"/srcpkgs/"${pkg}"/template ] ||
 	{
-		ansi --red-intense "PACKAGE "
-		ansi "$pkg"
-		ansi -n --red-intense " DOESN'T EXIST"
+		ansi --red-intense -n "PACKAGE "
+		ansi -n "$pkg"
+		ansi --red-intense " DOESN'T EXIST"
 		exit 1
 	}
 # Source the template to get the changelog url and other information
