@@ -3,13 +3,10 @@
 find "${1:-srcpkgs/}" -iname template -type f | while IFS= read -r file
 do
 	file="$(echo "$file" | cut -d/ -f2)"
-	hostmakedepends="$(xgetdeps hostmakedepends "$file" | tr " " "\\n" | sort | uniq -d | paste -sd ' ')"
-	makedepends="$(xgetdeps makedepends "$file" | tr " " "\\n" | sort | uniq -d | paste -sd ' ')"
-	depends="$(xgetdeps depends "$file" | tr " " "\\n" | sort | uniq -d | paste -sd ' ')"
-	checkdepends="$(xgetdeps checkdepends "$file" | tr " " "\\n" | sort | uniq -d | paste -sd ' ')"
+	for t in hostmakedepends makedepends checkdepends depends
+	do
+		eval $t="\$(xgetdeps $t $file | tr ' ' '\\n' | sort | uniq -d | paste -sd ' ')"
 
-	[ "$hostmakedepends" ] && printf "%s :: hostmakedepends :: %s\\n" "$file" "$hostmakedepends"
-	[ "$makedepends" ] && printf "%s :: makedepends :: %s\\n" "$file" "$makedepends"
-	[ "$depends" ] && printf "%s :: depends :: %s\\n" "$file" "$depends"
-	[ "$checkdepends" ] && printf "%s :: checkdepends :: %s\\n" "$file" "$checkdepends"
+		[ "$(eval echo \$$t)" ] && printf "%s :: %s :: %s\\n" "$file" "$t" "\$$t"
+	done
 done
