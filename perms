@@ -1,4 +1,5 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-only
 # perms
 # print out permissions in the format
 # <path> <octal> <user> <group>
