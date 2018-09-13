@@ -5,8 +5,9 @@ do
 	file="$(echo "$file" | cut -d/ -f2)"
 	for t in hostmakedepends makedepends checkdepends depends
 	do
-		eval $t="\$(xgetdeps $t $file | tr ' ' '\\n' | sort | uniq -d | paste -sd ' ')"
+		eval $t="\$(xgetdeps $t $file | tr ' ' '\\0' | sort -z | uniq -zd | tr '\\0' ' ')"
 
 		[ "$(eval echo \$$t)" ] && printf "%s :: %s :: %s\\n" "$file" "$t" "$(eval echo \$$t)"
 	done
 done
+exit 0
