@@ -7,6 +7,7 @@
 # It is the format used in make_dirs
 # this script is meant for checking permissions of directories
 # when converting them to make_dirs format
+set -- $@
 while [ $# -gt 0 ]
 do
 	# If the path doesn't exist assume it is 755 root root
