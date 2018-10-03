@@ -7,7 +7,10 @@ do
 	do
 		eval $t="\$(xgetdeps $t $file | tr ' ' '\\0' | sort -z | uniq -zd | paste -zsd ' ')"
 
-		[ "$(eval echo \$$t)" ] && printf "%s :: %s :: %s\\n" "$file" "$t" "$(eval echo \$$t)"
+		if [ "$(eval echo \$$t)" ]
+		then
+			printf "%s :: %s :: %s\\n" "$file" "$t" "$(eval echo \$$t)" ;
+		fi
 	done
 done
 exit 0
