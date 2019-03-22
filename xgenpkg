@@ -294,7 +294,7 @@ def main():
         pkglist = checkfile(pkglist, args.paths, shortdesc)
 
     append('\t}')
-    append('}')
+    append('}\n')
     pkgstring = '\n'.join(pkglist)
 
     print(pkgstring)
