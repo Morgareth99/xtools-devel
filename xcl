@@ -88,7 +88,9 @@ find_changelog() {
 			md) curl -L "$changelog" \
 				| pandoc | lynx -stdin -dump | less -R ;;
 			*) curl -L "$changelog" \
-				| less -R ;;
+				| elinks -dump -dump-color-mode 1 | less -R ;;
+			#*) curl -L "$changelog" \
+			#	| less -R ;;
 		esac
 	fi
 
